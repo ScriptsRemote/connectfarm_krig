@@ -34,7 +34,9 @@ app.post('/extract-pixel-value', async (req, res) => {
         }
         
         // Executar script Python para extrair valor
-        const pythonProcess = spawn('python', [
+        // Usar python3 em produção (Render/Linux) ou python no Windows
+        const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+        const pythonProcess = spawn(pythonCmd, [
             'extract_pixel_value.py',
             '--tiff', tiffPath,
             '--lat', lat.toString(),
@@ -1009,8 +1011,12 @@ app.post('/generate-interpolation', (req, res) => {
       ];
       
       console.log('🐍 Executando script Python:', args.join(' '));
+      console.log('🔍 Plataforma:', process.platform);
       
-      const pythonProcess = spawn('python', args, {
+      // Usar python3 em produção (Render/Linux) ou python no Windows
+      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+      console.log('🐍 Comando Python:', pythonCmd);
+      const pythonProcess = spawn(pythonCmd, args, {
         cwd: __dirname,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -1028,7 +1034,20 @@ app.post('/generate-interpolation', (req, res) => {
         console.log(`Python stderr (${param}):`, data.toString().trim());
       });
       
+      pythonProcess.on('error', (error) => {
+        console.error(`❌ Erro ao executar Python (${param}):`, error);
+        console.error('💡 Verifique se Python3 está instalado no sistema');
+        results.interpolations[param] = {
+          success: false,
+          error: `Erro ao executar Python: ${error.message}`,
+          files: { png: false, tiff: false }
+        };
+        processedCount++;
+        processParameter(paramIndex + 1);
+      });
+      
       pythonProcess.on('close', (code) => {
+        console.log(`🏁 Processo Python finalizado (${param}): código ${code}`);
         if (code === 0) {
           console.log(`✅ Interpolação concluída para ${param}`);
           

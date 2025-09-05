@@ -2766,19 +2766,25 @@ function generateInterpolation() {
             config: config
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             interpolationResults = data;
             displayInterpolationResults(data);
             showAlert('Interpolação gerada com sucesso!', 'success');
         } else {
-            showAlert('Erro ao gerar interpolação: ' + data.error, 'danger');
+            console.error('❌ Erro de interpolação:', data);
+            showAlert('Erro ao gerar interpolação: ' + (data.error || 'Erro desconhecido'), 'danger');
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
-        showAlert('Erro ao gerar interpolação', 'danger');
+        console.error('❌ Erro de rede/servidor:', error);
+        showAlert(`Erro de conexão: ${error.message}`, 'danger');
     })
     .finally(() => {
         showLoading(false);
