@@ -1,0 +1,28 @@
+# 🚫 ConnectFarm - Arquivos a ignorar no Docker
+
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+.env
+.nyc_output
+coverage
+.nyc_output
+.coverage
+.vscode
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários e outputs
+uploads/temp_*
+output/*.tif
+output/*.png
+logs/*.log
+
+# Arquivos de desenvolvimento
+*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

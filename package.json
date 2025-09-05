@@ -1,11 +1,17 @@
 {
-  "name": "connecfarm-sampling-grid",
+  "name": "connectfarm-krig",
   "version": "1.0.0",
-  "description": "Sistema de geração de malhas de amostragem para agricultura de precisão",
+  "description": "Sistema de interpolação e análise de solo para agricultura de precisão",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo 'Build completed successfully'",
+    "postinstall": "echo 'Dependencies installed successfully'"
   },
   "dependencies": {
     "@mapbox/togeojson": "^0.16.0",
@@ -24,11 +30,15 @@
   "keywords": [
     "agricultura",
     "amostragem",
-    "grid",
+    "interpolação",
+    "kriging",
+    "idw",
+    "solo",
     "leaflet",
     "shapefile",
-    "kml"
+    "geotiff",
+    "raster"
   ],
-  "author": "ConnecFarm",
+  "author": "ConnectFarm",
   "license": "MIT"
 }
