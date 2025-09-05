@@ -479,6 +479,14 @@ function exportAsKML(features, filename) {
 
 // Exportar como GeoJSON
 function exportAsGeoJSON(features, filename) {
+    console.log('📁 Iniciando export GeoJSON:', filename, '- Features:', features.length);
+    
+    // Validar dados antes de enviar
+    if (!features || features.length === 0) {
+        showAlert('Nenhuma feature para exportar', 'warning');
+        return;
+    }
+    
     fetch('/export/geojson', {
         method: 'POST',
         headers: {
@@ -489,8 +497,27 @@ function exportAsGeoJSON(features, filename) {
             filename: filename
         })
     })
-    .then(response => response.blob())
+    .then(response => {
+        console.log('📁 Resposta do servidor:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Verificar se é realmente um blob
+        const contentType = response.headers.get('Content-Type');
+        console.log('📁 Content-Type:', contentType);
+        
+        return response.blob();
+    })
     .then(blob => {
+        console.log('📁 Blob recebido:', blob.size, 'bytes, tipo:', blob.type);
+        
+        // Verificar se o blob não está vazio
+        if (blob.size === 0) {
+            throw new Error('Arquivo vazio recebido do servidor');
+        }
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -499,10 +526,13 @@ function exportAsGeoJSON(features, filename) {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        
+        console.log('✅ Download iniciado:', `${filename}.geojson`);
+        showAlert('Arquivo GeoJSON baixado com sucesso!', 'success');
     })
     .catch(error => {
-        console.error('Erro ao exportar GeoJSON:', error);
-        showAlert('Erro ao exportar GeoJSON', 'danger');
+        console.error('❌ Erro ao exportar GeoJSON:', error);
+        showAlert(`Erro ao exportar GeoJSON: ${error.message}`, 'danger');
     });
 }
 

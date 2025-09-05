@@ -1210,6 +1210,135 @@ app.post('/download-interpolation', (req, res) => {
   }
 });
 
+// 📁 Rota para exportar GeoJSON (FALTAVA!)
+app.post('/export/geojson', (req, res) => {
+  try {
+    const { features, filename } = req.body;
+    
+    if (!features || !filename) {
+      return res.status(400).json({ error: 'Features e filename são obrigatórios' });
+    }
+    
+    if (!Array.isArray(features) || features.length === 0) {
+      return res.status(400).json({ error: 'Features deve ser um array não vazio' });
+    }
+    
+    console.log('📁 Exportando GeoJSON:', filename, '- Features:', features.length);
+    
+    // 🔧 Limpar e validar features para evitar corrupção
+    const cleanFeatures = features.map((feature, index) => {
+      try {
+        // Criar feature limpa
+        const cleanFeature = {
+          type: 'Feature',
+          properties: {},
+          geometry: null
+        };
+        
+        // Limpar propriedades (remover null, undefined, NaN)
+        if (feature.properties && typeof feature.properties === 'object') {
+          Object.keys(feature.properties).forEach(key => {
+            const value = feature.properties[key];
+            if (value !== null && value !== undefined && !Number.isNaN(value)) {
+              cleanFeature.properties[key] = value;
+            } else {
+              // Substituir valores problemáticos
+              if (typeof value === 'number' && Number.isNaN(value)) {
+                cleanFeature.properties[key] = 0;
+              } else if (value === null || value === undefined) {
+                cleanFeature.properties[key] = '';
+              }
+            }
+          });
+        }
+        
+        // Limpar geometria
+        if (feature.geometry && feature.geometry.type && feature.geometry.coordinates) {
+          cleanFeature.geometry = {
+            type: feature.geometry.type,
+            coordinates: feature.geometry.coordinates
+          };
+          
+          // Validar coordenadas para evitar NaN
+          if (Array.isArray(feature.geometry.coordinates)) {
+            const validateCoords = (coords) => {
+              if (Array.isArray(coords[0])) {
+                return coords.map(validateCoords);
+              } else {
+                return coords.map(coord => {
+                  if (typeof coord === 'number' && !Number.isNaN(coord)) {
+                    return coord;
+                  } else {
+                    console.warn(`⚠️ Coordenada inválida corrigida: ${coord} → 0`);
+                    return 0;
+                  }
+                });
+              }
+            };
+            
+            cleanFeature.geometry.coordinates = validateCoords(feature.geometry.coordinates);
+          }
+        }
+        
+        return cleanFeature;
+      } catch (cleanError) {
+        console.warn(`⚠️ Erro ao limpar feature ${index}:`, cleanError.message);
+        // Retornar feature mínima válida
+        return {
+          type: 'Feature',
+          properties: { id: index },
+          geometry: {
+            type: 'Point',
+            coordinates: [0, 0]
+          }
+        };
+      }
+    });
+    
+    // Criar GeoJSON válido
+    const geoJson = {
+      type: 'FeatureCollection',
+      name: filename,
+      crs: {
+        type: 'name',
+        properties: {
+          name: 'urn:ogc:def:crs:OGC:1.3:CRS84'
+        }
+      },
+      features: cleanFeatures
+    };
+    
+    // Converter para string JSON com formatação
+    const geoJsonString = JSON.stringify(geoJson, null, 2);
+    
+    // Verificar se a string foi criada corretamente
+    if (!geoJsonString || geoJsonString.length === 0) {
+      throw new Error('Falha ao serializar GeoJSON');
+    }
+    
+    // Verificar se contém valores problemáticos
+    if (geoJsonString.includes('null') && geoJsonString.includes('"null"')) {
+      console.warn('⚠️ GeoJSON contém valores null - pode estar corrompido');
+    }
+    
+    console.log('📏 Tamanho do arquivo:', geoJsonString.length, 'caracteres');
+    
+    // Configurar headers para download
+    res.setHeader('Content-Type', 'application/geo+json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.geojson"`);
+    res.setHeader('Content-Length', Buffer.byteLength(geoJsonString, 'utf8'));
+    
+    // Enviar o arquivo
+    res.send(geoJsonString);
+    
+    console.log('✅ GeoJSON exportado com sucesso:', filename);
+    
+  } catch (error) {
+    console.error('❌ Erro ao exportar GeoJSON:', error);
+    res.status(500).json({ error: 'Erro ao exportar GeoJSON: ' + error.message });
+  }
+});
+
 // Rota principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
