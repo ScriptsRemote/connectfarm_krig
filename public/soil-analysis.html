@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectFarm - Análise de Solo e Interpolação</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* 🎨 ConnectFarm Color Palette */
+            --cf-primary-green: #2d5016;     /* Verde escuro principal */
+            --cf-secondary-green: #6b8f47;   /* Verde médio */
+            --cf-light-green: #8fa64c;       /* Verde oliva claro */
+            --cf-accent-teal: #4a9b8e;       /* Verde azulado */
+            --cf-warm-yellow: #f4b942;       /* Amarelo dourado */
+            --cf-warm-orange: #e67e22;       /* Laranja terra */
+            --cf-soft-white: #f8f9fa;        /* Branco suave */
+            --cf-text-dark: #2c3e50;         /* Texto escuro */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--cf-light-green) 0%, var(--cf-accent-teal) 100%);
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            background: var(--cf-soft-white);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(45, 80, 22, 0.15);
+            margin: 20px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--cf-primary-green) 0%, var(--cf-secondary-green) 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .logo-container img {
+            height: 70px;
+            filter: brightness(0) invert(1); /* Tornar logo branco */
+        }
+        
+        .logo-container div {
+            text-align: left;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 400;
+            color: white;
+        }
+        
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.0rem;
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .control-panel {
+            background: var(--cf-soft-white);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--cf-secondary-green);
+            box-shadow: 0 4px 15px rgba(45, 80, 22, 0.08);
+        }
+        
+        .control-panel h3 {
+            color: var(--cf-primary-green);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, var(--cf-primary-green) 0%, var(--cf-secondary-green) 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn-custom:hover {
+            background: linear-gradient(135deg, var(--cf-secondary-green) 0%, var(--cf-accent-teal) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(45, 80, 22, 0.3);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--cf-accent-teal) 0%, var(--cf-light-green) 100%);
+            border: none;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, var(--cf-light-green) 0%, var(--cf-warm-yellow) 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--cf-warm-yellow) 0%, var(--cf-warm-orange) 100%);
+            border: none;
+            color: white;
+        }
+        
+        .file-upload {
+            border: 2px dashed var(--cf-secondary-green);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: var(--cf-soft-white);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-upload:hover {
+            border-color: var(--cf-accent-teal);
+            background: rgba(74, 155, 142, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .info-panel {
+            background: #e8f5e8;
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .parameter-selection {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .interpolation-options {
+            background: #e3f2fd;
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+        
+        .stats-card h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .parameter-checkbox {
+            margin: 10px;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .parameter-checkbox:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .parameter-checkbox.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        
+        .method-option {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .method-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .method-option.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        
+        .results-section {
+            background: #f8f9fa;
+            border-left: 5px solid #6c757d;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            background: none;
+        }
+        
+        /* Estilos para o painel colapsável */
+        .card-header[data-bs-toggle="collapse"]:hover {
+            background-color: #17a2b8 !important;
+            transition: background-color 0.3s ease;
+        }
+        
+        .card-header[data-bs-toggle="collapse"] .fa-chevron-down,
+        .card-header[data-bs-toggle="collapse"] .fa-chevron-up {
+            transition: transform 0.3s ease;
+        }
+        
+        .card-header[data-bs-toggle="collapse"]:hover .fa-chevron-down,
+        .card-header[data-bs-toggle="collapse"]:hover .fa-chevron-up {
+            transform: scale(1.1);
+        }
+        
+        .collapse {
+            transition: all 0.3s ease;
+        }
+        
+        /* Estilos para o popup de inspeção do TIFF */
+        .tiff-inspection-popup .leaflet-popup-content-wrapper {
+            background: rgba(44, 62, 80, 0.95);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .tiff-inspection-popup .leaflet-popup-content {
+            margin: 8px 12px;
+            line-height: 1.4;
+        }
+        
+        .tiff-inspection-popup .leaflet-popup-tip {
+            background: rgba(44, 62, 80, 0.95);
+        }
+        
+        /* 🔍 Estilos para inspeção TIFF otimizada */
+        .tiff-inspection-popup-enhanced .leaflet-popup-content-wrapper {
+            background: transparent !important;
+            padding: 0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .tiff-inspection-popup-enhanced .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        .tiff-inspection-popup-enhanced .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.95) !important;
+            box-shadow: none !important;
+        }
+        
+        .tiff-inspection-popup-fixed .leaflet-popup-content-wrapper {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+            border: 2px solid #3498db !important;
+        }
+        
+        .tiff-inspection-popup-fixed .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Animação suave para popups */
+        .leaflet-popup {
+            transition: opacity 0.2s ease !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            transition: all 0.2s ease !important;
+        }
+        
+        /* 🎨 Melhorias ConnectFarm adicionais */
+        .progress-bar {
+            background: linear-gradient(135deg, var(--cf-secondary-green) 0%, var(--cf-accent-teal) 100%);
+        }
+        
+        .form-select:focus, .form-control:focus {
+            border-color: var(--cf-secondary-green);
+            box-shadow: 0 0 0 0.2rem rgba(107, 143, 71, 0.25);
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, var(--cf-accent-teal), rgba(74, 155, 142, 0.1));
+            border-color: var(--cf-accent-teal);
+            color: var(--cf-primary-green);
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, var(--cf-warm-yellow), rgba(244, 185, 66, 0.1));
+            border-color: var(--cf-warm-yellow);
+            color: var(--cf-text-dark);
+        }
+        
+        .text-muted {
+            color: var(--cf-text-dark) !important;
+            opacity: 0.7;
+        }
+        
+        /* Badges e tags */
+        .badge {
+            background: var(--cf-secondary-green) !important;
+        }
+        
+        /* Personalização do mapa */
+        #map {
+            border: 3px solid var(--cf-secondary-green);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(45, 80, 22, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="logo-container">
+                <img src="/uploads/logo.png" alt="ConnectFarm Logo" />
+                <div>
+                    <h1>ConnectFarm - Análise de Solo</h1>
+                    <p>Sistema de Interpolação e Mapeamento de Parâmetros de Solo</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Navegação -->
+            <div class="mb-4">
+                <a href="/" class="btn btn-custom">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Grid de Amostragem
+                </a>
+            </div>
+            
+            <!-- Painel de Controle -->
+            <div class="control-panel">
+                <h3><i class="fas fa-upload"></i> Upload de Dados de Solo</h3>
+                
+                <div class="file-upload" id="fileUpload">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <p class="mb-2">Arraste e solte arquivos aqui ou clique para selecionar</p>
+                    <p class="text-muted small">Formatos suportados: GeoJSON, ZIP (Shapefile)</p>
+                    <input type="file" id="fileInput" accept=".geojson,.json,.zip" style="display: none;">
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-custom" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> Selecionar Arquivo
+                    </button>
+                    <button class="btn btn-custom btn-success" onclick="clearMap()">
+                        <i class="fas fa-trash"></i> Limpar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Informações do Arquivo -->
+            <div class="info-panel" id="fileInfo" style="display: none;">
+                <h4><i class="fas fa-info-circle"></i> Informações do Arquivo</h4>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Pontos</h4>
+                            <div class="number" id="totalPoints">0</div>
+                            <p>amostras</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Parâmetros</h4>
+                            <div class="number" id="totalParameters">0</div>
+                            <p>encontrados</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Área</h4>
+                            <div class="number" id="totalArea">0</div>
+                            <p>hectares</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Status</h4>
+                            <div class="number text-success">✓</div>
+                            <p>Pronto</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Seleção de Parâmetros -->
+            <div class="parameter-selection" id="parameterSelection" style="display: none;">
+                <h4><i class="fas fa-list"></i> Selecionar Parâmetros para Interpolação</h4>
+                <p class="text-muted">Selecione os parâmetros de solo que deseja analisar:</p>
+                <div id="parametersList" class="row">
+                    <!-- Parâmetros serão inseridos dinamicamente -->
+                </div>
+            </div>
+            
+            <!-- Opções de Interpolação -->
+            <div class="interpolation-options" id="interpolationOptions" style="display: none;">
+                <h4><i class="fas fa-chart-line"></i> Configuração da Interpolação</h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Método de Interpolação</h5>
+                        <div class="method-option" data-method="kriging" onclick="selectMethod('kriging')">
+                            <h6><i class="fas fa-chart-area"></i> Krigagem</h6>
+                            <p class="text-muted">Método geoestatístico avançado</p>
+                        </div>
+                        <div class="method-option" data-method="idw" onclick="selectMethod('idw')">
+                            <h6><i class="fas fa-chart-bar"></i> IDW (Inverse Distance Weighting)</h6>
+                            <p class="text-muted">Método de interpolação por distância</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5>Configurações</h5>
+                        <div class="mb-3">
+                            <label for="resolution" class="form-label">
+                                Resolução do Grid (metros)
+                                <i class="fas fa-info-circle text-primary" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="Distância entre pontos da malha de interpolação. Menor valor = mais pontos = maior precisão"></i>
+                            </label>
+                            <input type="number" class="form-control" id="resolution" value="10" min="1" max="100">
+                            <small class="form-text text-muted">
+                                <strong>5m:</strong> Alta precisão (lento) | 
+                                <strong>10m:</strong> Equilibrado | 
+                                <strong>20m:</strong> Rápido (menos preciso)
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="searchRadius" class="form-label">
+                                Raio de Busca (metros)
+                                <i class="fas fa-info-circle text-primary" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="Distância máxima de influência dos pontos de amostra. Controla a suavidade da interpolação"></i>
+                            </label>
+                            <input type="number" class="form-control" id="searchRadius" value="100" min="10" max="1000">
+                            <small class="form-text text-muted">
+                                <strong>50m:</strong> Variação local | 
+                                <strong>100m:</strong> Equilibrado | 
+                                <strong>200m:</strong> Variação regional
+                            </small>
+                        </div>
+                        
+                        <!-- Info Box - Explicação dos Parâmetros (Colapsável) -->
+                        <div class="card mt-3">
+                            <div class="card-header bg-info text-white" 
+                                 style="cursor: pointer;" 
+                                 onclick="toggleParameterInfo()"
+                                 data-bs-toggle="collapse" 
+                                 data-bs-target="#parameterInfoCollapse" 
+                                 aria-expanded="false" 
+                                 aria-controls="parameterInfoCollapse">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-lightbulb"></i> 
+                                    <strong>Como Funcionam os Parâmetros</strong>
+                                    <i class="fas fa-chevron-down float-end" id="parameterInfoIcon"></i>
+                                </h6>
+                            </div>
+                            <div class="collapse" id="parameterInfoCollapse">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>🔧 Resolução do Grid:</strong>
+                                            <ul class="mb-0 small">
+                                                <li><strong>5m:</strong> Alta precisão (processamento lento)</li>
+                                                <li><strong>10m:</strong> Equilibrado (recomendado)</li>
+                                                <li><strong>20m:</strong> Rápido (menos preciso)</li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>🔍 Raio de Busca:</strong>
+                                            <ul class="mb-0 small">
+                                                <li><strong>50m:</strong> Variação local (mais detalhado)</li>
+                                                <li><strong>100m:</strong> Equilibrado (recomendado)</li>
+                                                <li><strong>200m:</strong> Variação regional (mais suave)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <hr class="my-2">
+                                    <small class="text-muted">
+                                        <strong>💡 Dica:</strong> Use <strong>10m + 100m</strong> para começar. Ajuste conforme sua necessidade de precisão vs. velocidade.
+                                    </small>
+                                    
+                                    <!-- Tabela de Referência Rápida -->
+                                    <div class="mt-3">
+                                        <h6 class="text-primary"><i class="fas fa-table"></i> <strong>Referência Rápida:</strong></h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Uso</th>
+                                                        <th>Resolução</th>
+                                                        <th>Raio</th>
+                                                        <th>Resultado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><strong>Agricultura de Precisão</strong></td>
+                                                        <td>5m</td>
+                                                        <td>50m</td>
+                                                        <td>Alta precisão local</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Mapeamento Geral</strong></td>
+                                                        <td>10m</td>
+                                                        <td>100m</td>
+                                                        <td>Equilibrado (recomendado)</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Visão Regional</strong></td>
+                                                        <td>20m</td>
+                                                        <td>200m</td>
+                                                        <td>Processamento rápido</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modo de Interpolação (apenas para Kriging) -->
+                        <div class="mb-3" id="interpolationModeGroup" style="display: none;">
+                            <label for="interpolationMode" class="form-label">Modo de Interpolação:</label>
+                            <select id="interpolationMode" class="form-control" onchange="toggleInterpolationMode()">
+                                <option value="auto">🤖 Automático (Recomendado)</option>
+                                <option value="manual">🎛️ Manual (Avançado)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                <strong>Automático:</strong> Análise automática de variogramas para otimizar parâmetros<br>
+                                <strong>Manual:</strong> Controle total sobre kernel, length_scale e alpha
+                            </small>
+                        </div>
+                        
+                        <!-- Parâmetros Manuais (ocultos por padrão) -->
+                        <div class="mb-3" id="manualParamsGroup" style="display: none;">
+                            <h6 class="text-primary">🎛️ Parâmetros Avançados do Kernel</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="kernelType" class="form-label">Tipo de Kernel:</label>
+                                    <select id="kernelType" class="form-control">
+                                        <option value="RBF">RBF (Radial Basis Function)</option>
+                                        <option value="Matern">Matern (Matérn)</option>
+                                        <option value="Exponential">Exponential</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="lengthScale" class="form-label">Length Scale:</label>
+                                    <input type="range" id="lengthScale" min="0.01" max="1.0" step="0.01" class="form-control-range" oninput="updateSliderValues()">
+                                    <small class="form-text text-muted">Valor: <span id="lengthScaleValue">0.1</span></small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="alpha" class="form-label">Alpha (Regularização):</label>
+                                    <input type="number" id="alpha" min="1e-10" max="1e-3" step="1e-10" class="form-control" value="1e-6" oninput="updateSliderValues()">
+                                    <small class="form-text text-muted">Valor: <span id="alphaValue">1e-6</span></small>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-4">
+                                    <label for="nugget" class="form-label">Nugget Effect:</label>
+                                    <input type="range" id="nugget" min="0" max="1" step="0.01" class="form-control-range" oninput="updateSliderValues()">
+                                    <small class="form-text text-muted">Valor: <span id="nuggetValue">0.0</span></small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="sill" class="form-label">Sill:</label>
+                                    <input type="range" id="sill" min="0.1" max="2.0" step="0.1" class="form-control-range" oninput="updateSliderValues()">
+                                    <small class="form-text text-muted">Valor: <span id="sillValue">1.0</span></small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="range" class="form-label">Range:</label>
+                                    <input type="range" id="range" min="0.1" max="2.0" step="0.1" class="form-control-range" oninput="updateSliderValues()">
+                                    <small class="form-text text-muted">Valor: <span id="rangeValue">1.0</span></small>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info mt-2">
+                                <strong>💡 Dica:</strong> Estes parâmetros controlam a suavidade e precisão da interpolação.
+                                Use o modo automático para resultados otimizados automaticamente.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                                        <div class="mt-3">
+                            <button class="btn btn-custom btn-success" onclick="generateInterpolation()">
+                                <i class="fas fa-magic"></i> Gerar Interpolação
+                            </button>
+                            
+                            <!-- Sistema Otimizado -->
+                            <div class="mt-3 p-3 bg-success bg-opacity-10 rounded border border-success">
+                                <h6><i class="fas fa-rocket"></i> <strong>Sistema Otimizado:</strong></h6>
+                                <p class="mb-0 text-success">
+                                    <i class="fas fa-check-circle"></i> 
+                                    Performance máxima - apenas interpolação TIFF será exibida
+                                </p>
+                                <small class="text-muted">
+                                    Ideal para datasets grandes e visualização rápida de resultados
+                                </small>
+                            </div>
+                        </div>
+            </div>
+            
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando interpolação...</p>
+            </div>
+            
+            <!-- Resultados -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h4><i class="fas fa-chart-pie"></i> Resultados da Interpolação</h4>
+                
+                <!-- Abas para diferentes visualizações -->
+                <ul class="nav nav-tabs" id="resultsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="map-tab" data-bs-toggle="tab" data-bs-target="#map" type="button" role="tab">
+                            <i class="fas fa-map"></i> Mapa
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab">
+                            <i class="fas fa-chart-bar"></i> Estatísticas
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="resultsTabContent">
+                    <div class="tab-pane fade show active" id="map" role="tabpanel">
+                        <!-- Instruções de inspeção -->
+                        <div class="alert alert-info mt-2 mb-3" style="border-left: 4px solid #3498db;">
+                            <i class="fas fa-mouse-pointer"></i> 
+                            <strong>Inspeção de Pixels:</strong> 
+                            Passe o mouse sobre a área colorida para ver os valores exatos dos parâmetros.
+                        </div>
+                        
+                        
+                        <!-- Sistema otimizado: apenas interpolação TIFF -->
+                        <div class="map-container" id="map"></div>
+                    </div>
+                    <div class="tab-pane fade" id="stats" role="tabpanel">
+                        <div id="statisticsContent">
+                            <!-- Estatísticas serão inseridas aqui -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Download dos Resultados -->
+                <div class="mt-4">
+                    <h5><i class="fas fa-download"></i> Download dos Resultados</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Imagens</h6>
+                            <div id="imageDownloads">
+                                <!-- Botões de download serão inseridos aqui -->
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Dados</h6>
+                            <div id="dataDownloads">
+                                <!-- Botões de download serão inseridos aqui -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- GeoTIFF e GeoRaster libraries - Versão simplificada (como no exemplo) -->
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
+    <!-- 🎯 SOLUÇÃO OFFLINE - SEM DEPENDÊNCIAS EXTERNAS -->
+    <script>
+        // Sistema offline de extração de pixel - 100% local
+        window.offlinePixelExtractor = {
+            // Extração direta usando georaster com logs detalhados
+            extractValue: function(georaster, lng, lat) {
+                console.log("🔍 ===== EXTRAÇÃO OFFLINE DETALHADA =====");
+                console.log("📍 Entrada:", { lng, lat });
+                
+                if (!georaster) {
+                    console.log("❌ Georaster é null/undefined");
+                    return null;
+                }
+                
+                console.log("📊 Georaster:", {
+                    hasValues: !!georaster.values,
+                    valuesLength: georaster.values ? georaster.values.length : 0,
+                    firstBandExists: !!(georaster.values && georaster.values[0]),
+                    bounds: { 
+                        xmin: georaster.xmin, 
+                        xmax: georaster.xmax, 
+                        ymin: georaster.ymin, 
+                        ymax: georaster.ymax 
+                    },
+                    dimensions: { width: georaster.width, height: georaster.height }
+                });
+
+                if (!georaster.values || !georaster.values[0]) {
+                    console.log("❌ Georaster.values[0] não existe");
+                    return null;
+                }
+
+                const { xmin, xmax, ymin, ymax, width, height } = georaster;
+                
+                // Calcular posição no grid
+                const col = Math.floor((lng - xmin) / (xmax - xmin) * width);
+                const row = Math.floor((ymax - lat) / (ymax - ymin) * height);
+                
+                console.log("📐 Cálculos:", {
+                    relativeX: (lng - xmin) / (xmax - xmin),
+                    relativeY: (ymax - lat) / (ymax - ymin),
+                    col, row, width, height
+                });
+                
+                // Verificar limites
+                if (col < 0 || col >= width || row < 0 || row >= height) {
+                    console.log("❌ Coordenadas fora dos limites:", { col, row, width, height });
+                    return null;
+                }
+                
+                const values = georaster.values[0];
+                const index = row * width + col;
+                
+                console.log("📊 Estrutura dos valores:", {
+                    isArray: Array.isArray(values),
+                    hasLength: values.length !== undefined,
+                    length: values.length,
+                    type: typeof values,
+                    constructor: values.constructor.name,
+                    index: index
+                });
+                
+                let extractedValue = null;
+                
+                // Estratégia 1: Array normal
+                if (Array.isArray(values)) {
+                    extractedValue = values[index];
+                    console.log("📊 Valor extraído (Array):", extractedValue);
+                } 
+                // Estratégia 2: TypedArray
+                else if (values.length !== undefined) {
+                    extractedValue = values[index];
+                    console.log("📊 Valor extraído (TypedArray):", extractedValue);
+                }
+                // Estratégia 3: Outros tipos
+                else {
+                    console.log("❌ Tipo de dados não suportado");
+                    return null;
+                }
+                
+                console.log("🎯 Valor final:", extractedValue);
+                console.log("================================");
+                
+                return extractedValue;
+            },
+            
+            // Extração com amostragem ao redor
+            extractWithSampling: function(georaster, lng, lat) {
+                const mainValue = this.extractValue(georaster, lng, lat);
+                if (mainValue !== null && !isNaN(mainValue)) {
+                    return mainValue;
+                }
+                
+                // Amostragem em cruz ao redor
+                const offset = 0.001; // ~100m
+                const samples = [
+                    this.extractValue(georaster, lng + offset, lat),
+                    this.extractValue(georaster, lng - offset, lat),
+                    this.extractValue(georaster, lng, lat + offset),
+                    this.extractValue(georaster, lng, lat - offset)
+                ];
+                
+                const validSamples = samples.filter(v => v !== null && !isNaN(v));
+                if (validSamples.length > 0) {
+                    return validSamples[0]; // Retornar primeira amostra válida
+                }
+                
+                return null;
+            }
+        };
+        
+        console.log('✅ EXTRATOR OFFLINE CARREGADO!');
+    </script>
+    
+    <!-- Verificação simples das bibliotecas -->
+    <script>
+        // Função para verificar se as bibliotecas estão carregadas
+        function checkLibraryStatus() {
+            const status = {
+                'parseGeoraster': typeof parseGeoraster !== 'undefined',
+                'GeoRasterLayer': typeof GeoRasterLayer !== 'undefined',
+                'offlinePixelExtractor': typeof window.offlinePixelExtractor !== 'undefined'
+            };
+            
+            console.log('📚 Status das bibliotecas:', status);
+            
+            // ✅ GEOBLAZE foi substituído por extrator offline
+            console.log('💾 Usando extrator offline (sem dependências externas)');
+            
+            return status;
+        }
+        
+        // Aguardar carregamento das bibliotecas
+        window.addEventListener('load', function() {
+            console.log('🔄 Verificando bibliotecas...');
+            checkLibraryStatus();
+        });
+        
+        // Expor função globalmente
+        window.checkLibraryStatus = checkLibraryStatus;
+        
+        // Ativar tooltips do Bootstrap
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+        
+        // Função para alternar a info box de parâmetros
+        function toggleParameterInfo() {
+            const icon = document.getElementById('parameterInfoIcon');
+            const isExpanded = document.getElementById('parameterInfoCollapse').classList.contains('show');
+            
+            if (isExpanded) {
+                icon.className = 'fas fa-chevron-down float-end';
+            } else {
+                icon.className = 'fas fa-chevron-up float-end';
+            }
+        }
+    </script>
+    <script src="soil-analysis.js"></script>
+</body>
+</html>

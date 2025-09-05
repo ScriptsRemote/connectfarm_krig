@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectFarm - Sistema de Malhas de Amostragem</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* 🎨 ConnectFarm Color Palette */
+            --cf-primary-green: #2d5016;     /* Verde escuro principal */
+            --cf-secondary-green: #6b8f47;   /* Verde médio */
+            --cf-light-green: #8fa64c;       /* Verde oliva claro */
+            --cf-accent-teal: #4a9b8e;       /* Verde azulado */
+            --cf-warm-yellow: #f4b942;       /* Amarelo dourado */
+            --cf-warm-orange: #e67e22;       /* Laranja terra */
+            --cf-soft-white: #f8f9fa;        /* Branco suave */
+            --cf-text-dark: #2c3e50;         /* Texto escuro */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--cf-light-green) 0%, var(--cf-accent-teal) 100%);
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            background: var(--cf-soft-white);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(45, 80, 22, 0.15);
+            margin: 20px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--cf-primary-green) 0%, var(--cf-secondary-green) 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .logo-container img {
+            height: 70px;
+            filter: brightness(0) invert(1); /* Tornar logo branco */
+        }
+        
+        .logo-container div {
+            text-align: left;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 400;
+            color: white;
+        }
+        
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.0rem;
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .header .btn {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            padding: 15px 30px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .control-panel {
+            background: var(--cf-soft-white);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--cf-secondary-green);
+            box-shadow: 0 4px 15px rgba(45, 80, 22, 0.08);
+        }
+        
+        .control-panel h3 {
+            color: var(--cf-primary-green);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, var(--cf-primary-green) 0%, var(--cf-secondary-green) 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn-custom:hover {
+            background: linear-gradient(135deg, var(--cf-secondary-green) 0%, var(--cf-accent-teal) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(45, 80, 22, 0.3);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--cf-accent-teal) 0%, var(--cf-light-green) 100%);
+            border: none;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, var(--cf-light-green) 0%, var(--cf-warm-yellow) 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--cf-warm-yellow) 0%, var(--cf-warm-orange) 100%);
+            border: none;
+            color: white;
+        }
+        
+        .file-upload {
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .info-panel {
+            background: #e8f5e8;
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .grid-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .grid-option {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        
+        .grid-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .grid-option.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        
+        .grid-option h4 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+        
+        .grid-option p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .export-section {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+        
+        .stats-card h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        /* 🎨 Melhorias ConnectFarm */
+        #map {
+            border: 3px solid var(--cf-secondary-green);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(45, 80, 22, 0.15);
+        }
+        
+        .form-select:focus, .form-control:focus {
+            border-color: var(--cf-secondary-green);
+            box-shadow: 0 0 0 0.2rem rgba(107, 143, 71, 0.25);
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, var(--cf-accent-teal), rgba(74, 155, 142, 0.1));
+            border-color: var(--cf-accent-teal);
+            color: var(--cf-primary-green);
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, var(--cf-warm-yellow), rgba(244, 185, 66, 0.1));
+            border-color: var(--cf-warm-yellow);
+            color: var(--cf-text-dark);
+        }
+        
+        .badge {
+            background: var(--cf-secondary-green) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="logo-container">
+                <img src="/uploads/logo.png" alt="ConnectFarm Logo" />
+                <div>
+                    <h1>ConnectFarm</h1>
+                    <p>Sistema de Geração de Malhas de Amostragem para Agricultura de Precisão</p>
+                    <div class="mt-3">
+                        <a href="/soil-analysis.html" class="btn btn-custom btn-lg">
+                            <i class="fas fa-flask"></i> Análise de Solo e Interpolação
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Painel de Controle -->
+            <div class="control-panel">
+                <h3><i class="fas fa-cogs"></i> Configuração da Área de Estudo</h3>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-upload"></i> Importar Arquivo</h5>
+                        <div class="file-upload" id="fileUpload">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="mb-2">Arraste e solte arquivos aqui ou clique para selecionar</p>
+                            <p class="text-muted small">Formatos suportados: KML, KMZ, GeoJSON, JSON, ZIP (Shapefile)</p>
+                            <input type="file" id="fileInput" accept=".kml,.kmz,.geojson,.json,.zip" style="display: none;">
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-custom" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> Selecionar Arquivo
+                            </button>
+                            <button class="btn btn-custom btn-success" onclick="clearMap()">
+                                <i class="fas fa-trash"></i> Limpar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-draw-polygon"></i> Desenhar Área</h5>
+                        <p class="text-muted">Use as ferramentas do mapa para desenhar uma área de estudo</p>
+                        <div class="mt-3">
+                            <button class="btn btn-custom" onclick="enableDrawing()">
+                                <i class="fas fa-pencil-alt"></i> Ativar Desenho
+                            </button>
+                            <button class="btn btn-custom btn-warning" onclick="finishDrawing()">
+                                <i class="fas fa-check"></i> Finalizar Desenho
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informações da Área -->
+            <div class="info-panel" id="areaInfo" style="display: none;">
+                <h4><i class="fas fa-info-circle"></i> Informações da Área</h4>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Área Total</h4>
+                            <div class="number" id="totalArea">0</div>
+                            <p>hectares</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Latitude</h4>
+                            <div class="number" id="centerLat">0</div>
+                            <p>graus</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Longitude</h4>
+                            <div class="number" id="centerLng">0</div>
+                            <p>graus</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4>Status</h4>
+                            <div class="number text-success">✓</div>
+                            <p>Pronto</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mapa -->
+            <div class="map-container" id="map"></div>
+            
+            <!-- Opções de Grid -->
+            <div class="control-panel" id="gridOptions" style="display: none;">
+                <h3><i class="fas fa-th"></i> Configuração da Malha de Amostragem</h3>
+                
+                <div class="grid-options">
+                    <div class="grid-option" data-size="2" onclick="selectGridSize(2)">
+                        <h4>2 ha</h4>
+                        <p>Malha Fina</p>
+                        <small>Ideal para alta precisão</small>
+                    </div>
+                    <div class="grid-option" data-size="5" onclick="selectGridSize(5)">
+                        <h4>5 ha</h4>
+                        <p>Malha Média</p>
+                        <small>Equilibrio custo-benefício</small>
+                    </div>
+                    <div class="grid-option" data-size="10" onclick="selectGridSize(10)">
+                        <h4>10 ha</h4>
+                        <p>Malha Grossa</p>
+                        <small>Para áreas extensas</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-custom btn-success" onclick="generateGrid()">
+                        <i class="fas fa-magic"></i> Gerar Malha de Amostragem
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando...</p>
+            </div>
+            
+            <!-- Resultados -->
+            <div class="export-section" id="exportSection" style="display: none;">
+                <h4><i class="fas fa-download"></i> Exportar Resultados</h4>
+                <p>Malha de amostragem gerada com sucesso! Escolha o formato de exportação:</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Exportar Grid (Polígonos)</h5>
+                        <div class="mt-2">
+                            <button class="btn btn-custom" onclick="exportGrid('kml')">
+                                <i class="fas fa-file-code"></i> KML
+                            </button>
+                            <button class="btn btn-custom" onclick="exportGrid('geojson')">
+                                <i class="fas fa-file-code"></i> GeoJSON
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Exportar Pontos (Centróides)</h5>
+                        <div class="mt-2">
+                            <button class="btn btn-custom" onclick="exportPoints('kml')">
+                                <i class="fas fa-file-code"></i> KML
+                            </button>
+                            <button class="btn btn-custom" onclick="exportPoints('geojson')">
+                                <i class="fas fa-file-code"></i> GeoJSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Dica:</strong> Os arquivos exportados incluem ID do ponto, latitude, longitude e tamanho do grid.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
